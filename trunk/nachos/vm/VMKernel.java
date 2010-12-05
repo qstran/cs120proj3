@@ -16,8 +16,6 @@ public class VMKernel extends UserKernel {
      */
     public VMKernel() {
 	super();
-	for (int spn=0; spn<initSwapSize; spn++)
-	    freePages.add(new Integer(spn));
     }
 
     /**
@@ -25,6 +23,11 @@ public class VMKernel extends UserKernel {
      */
     public void initialize(String[] args) {
 	super.initialize(args);
+	for (int spn=0; spn<initSwapSize; spn++) {
+	    freePages.add(new Integer(spn));
+        }       
+	pageTableLock = new Lock();
+        TLBLock = new Lock();
     }
 
     /**
@@ -56,7 +59,8 @@ public class VMKernel extends UserKernel {
     /** This kernel's page table. */
     public TranslationEntry[] pageTable;
     /** Guards access to the pageTable. */
-    public static Lock pageTableLock;
+    public static Lock pageTableLock;// = new Lock();
+    public static Lock TLBLock;// = new Lock();
 
     /** The swap page free list. */
     private static LinkedList freeSwapPages = new LinkedList();

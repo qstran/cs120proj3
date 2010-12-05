@@ -22,11 +22,14 @@ public class VMProcess extends UserProcess {
      */
     public void saveState() {
 	TranslationEntry currEntry;
+        VMKernel.TLBLock.acquire();
 	for (int i=0; i<Machine.processor().getTLBSize(); i++){
 		currEntry = Machine.processor().readTLBEntry(i);
 		currEntry.valid = false;
 		Machine.processor().writeTLBEntry(i, currEntry);
 	}
+        VMKernel.TLBLock.release();
+       
     }
 
     /**
@@ -68,6 +71,8 @@ public class VMProcess extends UserProcess {
 	switch (cause) {
         case Processor.exceptionTLBMiss:
             logMsg("Got TLB Miss exception!");
+            int pid = super.processID();
+            logMsg("pid: " + pid);
             break;
 	default:
 	    super.handleException(cause);
