@@ -61,12 +61,21 @@ public class VMProcess extends UserProcess {
 	Processor processor = Machine.processor();
 
 	switch (cause) {
+        case Processor.exceptionTLBMiss:
+            logMsg("Got TLB Miss exception!");
+            break;
 	default:
 	    super.handleException(cause);
 	    break;
 	}
     }
 	
+    // shorter wrapper for log messages
+    private static final void logMsg (String msg) {
+        System.out.println(msg);
+    }
+    
+
     private static final int pageSize = Processor.pageSize;
     private static final char dbgProcess = 'a';
     private static final char dbgVM = 'v';
