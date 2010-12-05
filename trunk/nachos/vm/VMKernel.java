@@ -31,6 +31,7 @@ public class VMKernel extends UserKernel {
 	pageTableLock = new Lock();
 	invPageTableLock = new Lock();
         TLBLock = new Lock();
+	swapLock = new Lock();
         pageTable = new TranslationEntry[Machine.processor().getNumPhysPages()];
     }
 
@@ -63,8 +64,10 @@ public class VMKernel extends UserKernel {
     /** This kernel's page table. */
     public static TranslationEntry[] pageTable;
     /** Guards access to the pageTable. */
-    public static Lock pageTableLock;// = new Lock();
-    public static Lock TLBLock;// = new Lock();
+    public static Lock pageTableLock;
+    public static Lock TLBLock;
+
+    public static Lock swapLock;
 
     /** This kernel's page table. */
     public static int[] invPageTable;
@@ -75,14 +78,14 @@ public class VMKernel extends UserKernel {
     private static LinkedList freeSwapPages = new LinkedList();
     private static final int initSwapSize = 64;
 
-    private class swapKey {
+    private static class swapKey {
         public int vpn;
         public int pid;
     }
   
     private static HashMap<swapKey, Integer> swapPageMap = new HashMap<swapKey, Integer>();
    
-    public int getSwapPage(int vpn, int pid) {
+    public static int getSwapPage(int vpn, int pid) {
         swapKey skey = new swapKey();
         skey.vpn = vpn;
         skey.pid = pid;
