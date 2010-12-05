@@ -73,6 +73,34 @@ public class VMProcess extends UserProcess {
             logMsg("Got TLB Miss exception!");
             int pid = super.processID();
             logMsg("pid: " + pid);
+
+	    VMKernel.pageTableLock.acquire();
+	    int vaddr = Machine.processor().readRegister(Processor.regBadVAddr);
+	    int vpn = Processor.pageFromAddress(vaddr);
+	    TranslationEntry entry = VMKernel.pageTable[vpn];
+	    VMKernel.pageTableLock.release();
+
+	    if (!entry.valid || entry.vpn != vpn){
+	        logMsg("Invalid or mismatching TranslatinEntry");;
+	    }
+
+	    VMKernel.invPageTableLock.acquire();
+	    int associatedPid = VMKernel.invPageTable[vpn];
+	    VMKernel.invPageTableLock.release();
+
+	    if( associatedPid == pid ){
+		int rand = (int)(Machine.processor().getTLBSize() * Math.random());
+		logMsg("Our random num: " + rand);
+		Machine.processor().writeTLBEntry(rand, entry);
+	    }else{
+		////check swapspace
+		//if(exists){
+		//    //pageTable evict (according to clock);
+		//}else{
+		//    //make page;
+		//}
+	    }
+
             break;
 	default:
 	    super.handleException(cause);
