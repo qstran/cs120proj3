@@ -370,6 +370,9 @@ public class UserProcess {
 	for (int vpn=0; vpn<numPages; vpn++) {
 	    int ppn = ((Integer)UserKernel.freePages.removeFirst()).intValue();
 
+	    //TODO: implement the following
+	    //UserKernel.registerMemMap(ppn,vpn,processID);
+
 	    pageTable[vpn] = new TranslationEntry(vpn, ppn,
 						  true, false, false, false);
 	}
