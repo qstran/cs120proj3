@@ -14,6 +14,7 @@ public class VMProcess extends UserProcess {
      */
     public VMProcess() {
 	super();
+	pageTableLock = new Lock();
     }
 
     /**
@@ -74,7 +75,8 @@ public class VMProcess extends UserProcess {
             int pid = super.processID();
             logMsg("pid: " + pid);
 
-	    VMKernel.pageTableLock.acquire();
+	    pageTableLock.acquire();
+
 	    int vaddr = Machine.processor().readRegister(Processor.regBadVAddr);
 	    int vpn = Processor.pageFromAddress(vaddr);
  
@@ -87,26 +89,44 @@ public class VMProcess extends UserProcess {
 	    TranslationEntry entry = VMKernel.pageTable[vpn];
 	    VMKernel.pageTableLock.release();
 
-	    if (!entry.valid || entry.vpn != vpn){
-	        logMsg("Invalid or mismatching TranslatinEntry");;
+	    if( pageTable[vpn] == null ){			//wasn't in pageTable, check in swap
+		int filePageOffset = VMKernel.getSwapPage(vpn, pid);
+		int ppn;
+		VMKernel.memoryLock.acquire();
+		if ( VMKernel.freePages.size() > 0){	//nothing needs to be evicted
+		    ppn = ((Integer)UserKernel.freePages.removeFirst()).intValue();
+
+		    if(filePageOffset > 0){		//found page in swap
+			VMKernel.swapLock.acquire();
+			//move contents from swap into freepage
+			//TODO: if pinned somehow wait here without holding all prev locks forever
+			//maybe this should be a function call to VMKernel
+			VMKernel.swapLock.release();
+		    }
+		}else{					//something needs to be evicted
+		    //TODO: implement evict
+		    //ppn = VMKernel.ptEvict();
+
+		   //TODO: DON'T LEAVE THIS!!!!!!!!!!!!
+		   //just so it'll compile for now
+		   ppn = 1;
+		}
+
+		pageTable[vpn] = new TranslationEntry(vpn, ppn, true, false, false, false);
+		VMKernel.memoryLock.release();
 	    }
 
-	    VMKernel.invPageTableLock.acquire();
-	    int associatedPid = VMKernel.invPageTable[vpn];
-	    VMKernel.invPageTableLock.release();
+	    pageTableLock.release();
 
-	    if( associatedPid == pid ){
-		int rand = (int)(Machine.processor().getTLBSize() * Math.random());
-		logMsg("Our random num: " + rand);
-		Machine.processor().writeTLBEntry(rand, entry);
-	    }else{
-		////check swapspace
-		//if(exists){
-		//    //pageTable evict (according to clock);
-		//}else{
-		//    //make page;
-		//}
+	    if (!pageTable[vpn].valid || pageTable[vpn].vpn != vpn){
+		    logMsg("Invalid or mismatching TranslatinEntry");;
 	    }
+
+	    VMKernel.TLBLock.acquire();
+	    int rand = (int)(Machine.processor().getTLBSize() * Math.random());
+	    logMsg("Our random num: " + rand);
+	    Machine.processor().writeTLBEntry(rand, pageTable[vpn]);
+	    VMKernel.TLBLock.release();
 
             break;
 	default:
@@ -120,7 +140,8 @@ public class VMProcess extends UserProcess {
         System.out.println(msg);
     }
     
-
+    /** Guards access to this pageTable. */
+    protected Lock pageTableLock;
     private static final int pageSize = Processor.pageSize;
     private static final char dbgProcess = 'a';
     private static final char dbgVM = 'v';
