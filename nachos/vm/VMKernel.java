@@ -6,6 +6,8 @@ import nachos.userprog.*;
 import nachos.vm.*;
 
 import java.util.LinkedList;
+import java.util.HashMap;
+import java.util.Iterator;
 
 /**
  * A kernel that can support multiple demand-paging user processes.
@@ -29,6 +31,7 @@ public class VMKernel extends UserKernel {
 	pageTableLock = new Lock();
 	invPageTableLock = new Lock();
         TLBLock = new Lock();
+        pageTable = new TranslationEntry[Machine.processor().getNumPhysPages()];
     }
 
     /**
@@ -65,10 +68,28 @@ public class VMKernel extends UserKernel {
 
     /** This kernel's page table. */
     public static int[] invPageTable;
-    /** Guards access to the pageTable. */
+    /** Guards access to the inverse pageTable. */
     public static Lock invPageTableLock;
 
     /** The swap page free list. */
     private static LinkedList freeSwapPages = new LinkedList();
     private static final int initSwapSize = 64;
+
+    private class swapKey {
+        public int vpn;
+        public int pid;
+    }
+  
+    private static HashMap<swapKey, Integer> swapPageMap = new HashMap<swapKey, Integer>();
+   
+    public int getSwapPage(int vpn, int pid) {
+        swapKey skey = new swapKey();
+        skey.vpn = vpn;
+        skey.pid = pid;
+
+        // Now search for the vpn, pid pair within our map
+        Integer index = swapPageMap.get(skey);
+        return index; 
+    }
+
 }

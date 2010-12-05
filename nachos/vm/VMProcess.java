@@ -77,6 +77,13 @@ public class VMProcess extends UserProcess {
 	    VMKernel.pageTableLock.acquire();
 	    int vaddr = Machine.processor().readRegister(Processor.regBadVAddr);
 	    int vpn = Processor.pageFromAddress(vaddr);
+ 
+            if(VMKernel.pageTable == null)
+                logMsg("page table is null");
+            if(VMKernel.pageTable[vpn] == null)
+                logMsg("pagetable entry is null");
+
+
 	    TranslationEntry entry = VMKernel.pageTable[vpn];
 	    VMKernel.pageTableLock.release();
 
