@@ -22,10 +22,10 @@ public class VMProcess extends UserProcess {
      */
     public void saveState() {
 	TranslationEntry currEntry;
-	for (int i=0; i<Processor.tlbSize; i++){
-		currEntry = readTLBEntry(i);
+	for (int i=0; i<Machine.processor().getTLBSize(); i++){
+		currEntry = Machine.processor().readTLBEntry(i);
 		currEntry.valid = false;
-		writeTLBEntry(i, currEntry)
+		Machine.processor().writeTLBEntry(i, currEntry);
 	}
     }
 
@@ -35,9 +35,6 @@ public class VMProcess extends UserProcess {
      */
     public void restoreState() {
 	//super.restoreState();	//Machine.processor().setPageTable(pageTable);
-	VMKernel.pageTableLock.acquire();
-	Manage VPN ambiguity
-	VMKernel.pageTableLock.release();
     }
 
     /**

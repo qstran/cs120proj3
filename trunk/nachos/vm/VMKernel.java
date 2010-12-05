@@ -5,6 +5,8 @@ import nachos.threads.*;
 import nachos.userprog.*;
 import nachos.vm.*;
 
+import java.util.LinkedList;
+
 /**
  * A kernel that can support multiple demand-paging user processes.
  */
@@ -58,5 +60,5 @@ public class VMKernel extends UserKernel {
 
     /** The swap page free list. */
     private static LinkedList freeSwapPages = new LinkedList();
-    private static final initSwapSize = 64;
+    private static final int initSwapSize = 64;
 }
