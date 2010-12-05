@@ -14,6 +14,8 @@ public class VMKernel extends UserKernel {
      */
     public VMKernel() {
 	super();
+	for (int spn=0; spn<initSwapSize; spn++)
+	    freePages.add(new Integer(spn));
     }
 
     /**
@@ -48,4 +50,13 @@ public class VMKernel extends UserKernel {
     private static VMProcess dummy1 = null;
 
     private static final char dbgVM = 'v';
+
+    /** This kernel's page table. */
+    public TranslationEntry[] pageTable;
+    /** Guards access to the pageTable. */
+    public static Lock pageTableLock;
+
+    /** The swap page free list. */
+    private static LinkedList freeSwapPages = new LinkedList();
+    private static final initSwapSize = 64;
 }
