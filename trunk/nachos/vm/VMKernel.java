@@ -32,8 +32,9 @@ public class VMKernel extends UserKernel {
         TLBLock = new Lock();
 	swapLock = new Lock();
 
-	UUID uuid = UUID.randomUUID();
-	swapFileName = uuid.toString();
+	//UUID uuid = UUID.randomUUID();
+	//swapFileName = uuid.toString();
+	swapFileName = new String("nathanandseemantaarethebest.swap");
 
 	swapFile = ThreadedKernel.fileSystem.open(swapFileName, true);
 	if (swapFile == null){

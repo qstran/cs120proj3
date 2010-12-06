@@ -30,7 +30,6 @@ public class VMProcess extends UserProcess {
 		Machine.processor().writeTLBEntry(i, currEntry);
 	}
         VMKernel.TLBLock.release();
-       
     }
 
     /**
@@ -71,9 +70,9 @@ public class VMProcess extends UserProcess {
 
 	switch (cause) {
         case Processor.exceptionTLBMiss:
-            logMsg("Got TLB Miss exception!");
+            //logMsg("Got TLB Miss exception!");
             int pid = super.processID();
-            logMsg("pid: " + pid);
+            //logMsg("pid: " + pid);
 
 	    pageTableLock.acquire();
 
@@ -119,7 +118,7 @@ public class VMProcess extends UserProcess {
 
 	    VMKernel.TLBLock.acquire();
 	    int rand = (int)(Machine.processor().getTLBSize() * Math.random());
-	    logMsg("Our random num: " + rand);
+	    //logMsg("Our random num: " + rand);
 	    Machine.processor().writeTLBEntry(rand, pageTable[vpn]);
 	    VMKernel.TLBLock.release();
 
