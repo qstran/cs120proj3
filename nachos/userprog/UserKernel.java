@@ -5,6 +5,7 @@ import nachos.threads.*;
 import nachos.userprog.*;
 
 import java.util.LinkedList;
+import java.util.HashMap;
 
 /**
  * A kernel that can support multiple user processes.
@@ -108,12 +109,35 @@ public class UserKernel extends ThreadedKernel {
 	KThread.currentThread().finish();
     }
 
+    public static void registerMemToProc(int ppn, int vpn, UserProcess proc){
+	ProcPageKey key = new ProcPageKey(vpn, proc);
+	physPageMap.put(key, ppn);
+    }
+
+    public static void unregisterMemToProc(int ppn, int vpn, UserProcess proc){
+	ProcPageKey key = new ProcPageKey(vpn, proc);
+	physPageMap.remove(key);
+    }
+
     /**
      * Terminate this kernel. Never returns.
      */
     public void terminate() {
 	super.terminate();
     }
+
+    protected static class ProcPageKey {
+	public ProcPageKey(int vpn, UserProcess proc){
+	    this.vpn = vpn;
+	    this.proc = proc;
+	}
+
+        private int vpn;
+        private UserProcess proc;
+    }
+  
+    protected static HashMap<ProcPageKey, Integer> swapPageMap = new HashMap<ProcPageKey, Integer>();
+    protected static HashMap<ProcPageKey, Integer> physPageMap = new HashMap<ProcPageKey, Integer>();
 
     /** Globally accessible reference to the synchronized console. */
     public static SynchConsole console;

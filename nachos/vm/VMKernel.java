@@ -6,7 +6,6 @@ import nachos.userprog.*;
 import nachos.vm.*;
 
 import java.util.LinkedList;
-import java.util.HashMap;
 import java.util.Iterator;
 
 /**
@@ -56,6 +55,21 @@ public class VMKernel extends UserKernel {
 	super.terminate();
     }
 
+    public static int pageEvict(){
+	//decide which proc based on clock
+	//for now just pick first
+
+	//lock mem
+	
+	//unregisterMemToProc(int ppn, int vpn, UserProcess proc);
+	return 1;	//TODO: CHANGE THIS!!!!!!!!!
+    }
+
+    public static Integer checkSwapSpace(int vpn, UserProcess proc){
+	ProcPageKey skey = new ProcPageKey(vpn, proc);
+	return swapPageMap.get(skey);
+    }
+
     // dummy variables to make javac smarter
     private static VMProcess dummy1 = null;
 
@@ -78,17 +92,10 @@ public class VMKernel extends UserKernel {
     private static LinkedList freeSwapPages = new LinkedList();
     private static final int initSwapSize = 64;
 
-    private static class swapKey {
-        public int vpn;
-        public int pid;
-    }
-  
-    private static HashMap<swapKey, Integer> swapPageMap = new HashMap<swapKey, Integer>();
+
    
-    public static int getSwapPage(int vpn, int pid) {
-        swapKey skey = new swapKey();
-        skey.vpn = vpn;
-        skey.pid = pid;
+    public static int getSwapPage(int vpn, UserProcess proc) {
+        ProcPageKey skey = new ProcPageKey(vpn, proc);
 
         // Now search for the vpn, pid pair within our map
         Integer index = swapPageMap.get(skey);
