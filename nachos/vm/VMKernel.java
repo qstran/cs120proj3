@@ -27,11 +27,9 @@ public class VMKernel extends UserKernel {
 	for (int spn=0; spn<initSwapSize; spn++) {
 	    freePages.add(new Integer(spn));
         }       
-	pageTableLock = new Lock();
 	invPageTableLock = new Lock();
         TLBLock = new Lock();
 	swapLock = new Lock();
-        pageTable = new TranslationEntry[Machine.processor().getNumPhysPages()];
     }
 
     /**
@@ -76,9 +74,9 @@ public class VMKernel extends UserKernel {
     private static final char dbgVM = 'v';
 
     /** This kernel's page table. */
-    public static TranslationEntry[] pageTable;
+    //public static TranslationEntry[] pageTable;
     /** Guards access to the pageTable. */
-    public static Lock pageTableLock;
+    //public static Lock pageTableLock;
     public static Lock TLBLock;
 
     public static Lock swapLock;
