@@ -27,9 +27,8 @@ public class VMKernel extends UserKernel {
 	super.initialize(args);
 	//for (int spn=0; spn<initSwapPages; spn++) {
 	//    freePages.add(new Integer(spn));
-        //}       
-	invPageTableLock = new Lock();
-        TLBLock = new Lock();
+        //}
+
 	swapLock = new Lock();
 
 	//UUID uuid = UUID.randomUUID();
@@ -109,18 +108,14 @@ public class VMKernel extends UserKernel {
     //public static TranslationEntry[] pageTable;
     /** Guards access to the pageTable. */
     //public static Lock pageTableLock;
-    public static Lock TLBLock;
 
     public static Lock swapLock;
 
     /** This kernel's page table. */
     public static int[] invPageTable;
-    /** Guards access to the inverse pageTable. */
-    public static Lock invPageTableLock;
 
     /** The swap page free list. */
     private static LinkedList freeSwapPages = new LinkedList();
-    //private static final int initSwapPages = 64;
     private static String swapFileName;
     private static OpenFile swapFile;
 

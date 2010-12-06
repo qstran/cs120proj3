@@ -23,13 +23,12 @@ public class VMProcess extends UserProcess {
      */
     public void saveState() {
 	TranslationEntry currEntry;
-        VMKernel.TLBLock.acquire();
+
 	for (int i=0; i<Machine.processor().getTLBSize(); i++){
 		currEntry = Machine.processor().readTLBEntry(i);
 		currEntry.valid = false;
 		Machine.processor().writeTLBEntry(i, currEntry);
 	}
-        VMKernel.TLBLock.release();
     }
 
     /**
@@ -116,11 +115,9 @@ public class VMProcess extends UserProcess {
 		    logMsg("Invalid or mismatching TranslatinEntry");;
 	    }
 
-	    VMKernel.TLBLock.acquire();
 	    int rand = (int)(Machine.processor().getTLBSize() * Math.random());
 	    //logMsg("Our random num: " + rand);
 	    Machine.processor().writeTLBEntry(rand, pageTable[vpn]);
-	    VMKernel.TLBLock.release();
 
             break;
 	default:
