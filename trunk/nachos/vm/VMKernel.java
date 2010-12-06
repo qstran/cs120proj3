@@ -7,6 +7,7 @@ import nachos.vm.*;
 
 import java.util.LinkedList;
 import java.util.Iterator;
+import java.util.UUID;
 
 /**
  * A kernel that can support multiple demand-paging user processes.
@@ -24,12 +25,21 @@ public class VMKernel extends UserKernel {
      */
     public void initialize(String[] args) {
 	super.initialize(args);
-	for (int spn=0; spn<initSwapSize; spn++) {
-	    freePages.add(new Integer(spn));
-        }       
+	//for (int spn=0; spn<initSwapPages; spn++) {
+	//    freePages.add(new Integer(spn));
+        //}       
 	invPageTableLock = new Lock();
         TLBLock = new Lock();
 	swapLock = new Lock();
+
+	UUID uuid = UUID.randomUUID();
+	swapFileName = uuid.toString();
+
+	swapFile = ThreadedKernel.fileSystem.open(swapFileName, true);
+	if (swapFile == null){
+	    Machine.halt();
+	    Lib.assertNotReached("Machine.halt() did not halt machine!");
+	}
     }
 
     /**
@@ -54,13 +64,34 @@ public class VMKernel extends UserKernel {
     }
 
     public static int pageEvict(){
+	//TODO: go through this code carefully and figure out what needs locks
+
+
 	//decide which proc based on clock
 	//for now just pick first
+	//TODO: CHANGE THIS!!!!!!!!!
+	int ppn = 1;
 
-	//lock mem
+	//acquire memLock?
+	ProcessInfo evictedProcInfo = physPageMap.remove(ppn);
+
+	//if FreeSwapPages.size() > 0
+	//int swapPage = FreeSwapPages.removeFirst();
+	byte[] pageData = new byte[pageSize];
+	byte[] memory = Machine.processor().getMemory();
+	System.arraycopy(memory, ppn*pageSize, pageData, 0, pageSize);
+	UserKernel.freePages.add(new Integer(ppn));
+	//free memlock?
+
+	//SwapFile.write(pageData, swapPage*pageSize, pageSize); //write to swapage
+	//else write new page
+	//
+
+	swapPageMap.put(evictedProcInfo, ppn);
 	
-	UserKernel.unregisterMemToProc(1);
-	return 1;	//TODO: CHANGE THIS!!!!!!!!!
+	
+	UserKernel.unregisterMemToProc(ppn);
+	return ppn;
     }
 
     public static Integer checkSwapSpace(int vpn, UserProcess proc){
@@ -88,9 +119,11 @@ public class VMKernel extends UserKernel {
 
     /** The swap page free list. */
     private static LinkedList freeSwapPages = new LinkedList();
-    private static final int initSwapSize = 64;
+    //private static final int initSwapPages = 64;
+    private static String swapFileName;
+    private static OpenFile swapFile;
 
-
+    private static final int pageSize = Processor.pageSize;
    
     public static int getSwapPage(int vpn, UserProcess proc) {
         ProcessInfo skey = new ProcessInfo(vpn, proc);
