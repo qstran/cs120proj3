@@ -59,12 +59,12 @@ public class VMKernel extends UserKernel {
 
 	//lock mem
 	
-	//unregisterMemToProc(int ppn, int vpn, UserProcess proc);
+	UserKernel.unregisterMemToProc(1);
 	return 1;	//TODO: CHANGE THIS!!!!!!!!!
     }
 
     public static Integer checkSwapSpace(int vpn, UserProcess proc){
-	ProcPageKey skey = new ProcPageKey(vpn, proc);
+	ProcessInfo skey = new ProcessInfo(vpn, proc);
 	return swapPageMap.get(skey);
     }
 
@@ -93,7 +93,7 @@ public class VMKernel extends UserKernel {
 
    
     public static int getSwapPage(int vpn, UserProcess proc) {
-        ProcPageKey skey = new ProcPageKey(vpn, proc);
+        ProcessInfo skey = new ProcessInfo(vpn, proc);
 
         // Now search for the vpn, pid pair within our map
         Integer index = swapPageMap.get(skey);
