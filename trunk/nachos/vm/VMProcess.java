@@ -80,15 +80,14 @@ public class VMProcess extends UserProcess {
 	    int vaddr = Machine.processor().readRegister(Processor.regBadVAddr);
 	    int vpn = Processor.pageFromAddress(vaddr);
  
-            if(VMKernel.pageTable == null)
+            if(pageTable == null)
                 logMsg("page table is null");
-            if(VMKernel.pageTable[vpn] == null)
+            if(pageTable[vpn] == null)
                 logMsg("pagetable entry is null");
 
 
 	    TranslationEntry entry = pageTable[vpn];
-	    VMKernel.pageTableLock.release();
-
+	    
 	    if( pageTable[vpn] == null ){			//wasn't in pageTable, check in swap
 		Integer filePageOffset = VMKernel.checkSwapSpace(vpn, (UserProcess) this);
 		int ppn;
