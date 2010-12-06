@@ -86,17 +86,17 @@ public class VMProcess extends UserProcess {
                 logMsg("pagetable entry is null");
 
 
-	    TranslationEntry entry = VMKernel.pageTable[vpn];
+	    TranslationEntry entry = pageTable[vpn];
 	    VMKernel.pageTableLock.release();
 
 	    if( pageTable[vpn] == null ){			//wasn't in pageTable, check in swap
-		int filePageOffset = VMKernel.getSwapPage(vpn, pid);
+		Integer filePageOffset = VMKernel.checkSwapSpace(vpn, (UserProcess) this);
 		int ppn;
 		VMKernel.memoryLock.acquire();
 		if ( VMKernel.freePages.size() > 0){	//nothing needs to be evicted
 		    ppn = ((Integer)UserKernel.freePages.removeFirst()).intValue();
 
-		    if(filePageOffset > 0){		//found page in swap
+		    if(filePageOffset != null){		//found page in swap
 			VMKernel.swapLock.acquire();
 			//move contents from swap into freepage
 			//TODO: if pinned somehow wait here without holding all prev locks forever
@@ -105,11 +105,7 @@ public class VMProcess extends UserProcess {
 		    }
 		}else{					//something needs to be evicted
 		    //TODO: implement evict
-		    //ppn = VMKernel.ptEvict();
-
-		   //TODO: DON'T LEAVE THIS!!!!!!!!!!!!
-		   //just so it'll compile for now
-		   ppn = 1;
+		    ppn = VMKernel.pageEvict();
 		}
 
 		pageTable[vpn] = new TranslationEntry(vpn, ppn, true, false, false, false);
