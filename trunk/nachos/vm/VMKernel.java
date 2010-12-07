@@ -65,39 +65,46 @@ public class VMKernel extends UserKernel {
 
     public static int pageEvict(){
 	//TODO: go through this code carefully and figure out what needs locks
+	Lib.assertTrue(UserKernel.memoryLock.isHeldByCurrentThread());
+	int swapPage;
 
-
-	//decide which proc based on clock
-	//for now just pick first
+	//decide which proc based on clock. for now just pick randomly
 	//TODO: CHANGE THIS!!!!!!!!!
-	int ppn = 1;
+	int ppn = (int)(Machine.processor().getNumPhysPages() * Math.random());
 
-	//acquire memLock?
-	ProcessInfo evictedProcInfo = physPageMap.remove(ppn);
+	//TODO: use Condition & memoryLock to sleep if all pages are pinned
 
-	//if FreeSwapPages.size() > 0
-	//int swapPage = FreeSwapPages.removeFirst();
-	byte[] pageData = new byte[pageSize];
-	byte[] memory = Machine.processor().getMemory();
-	System.arraycopy(memory, ppn*pageSize, pageData, 0, pageSize);
-	UserKernel.freePages.add(new Integer(ppn));
-	//free memlock?
+        //update IPT
+	ProcessInfo evictedProcInfo = physPageMap.get(ppn);
 
-	//SwapFile.write(pageData, swapPage*pageSize, pageSize); //write to swapage
-	//else write new page
-	//
+	//no need to write it to swap if page is read-only
+        if(evictedProcInfo.proc.isReadOnlyPage(evictedProcInfo.vpn)){
+	    if( freeSwapPages.size() > 0 ){
+	        swapPage = ((Integer)freeSwapPages.removeFirst()).intValue();
+	    }else{
+	        swapPage = swapFile.length() + 1;
+                if(swapPage < 0){
+                    System.out.println("swap file returning nasty length");
+                }
+	        freeSwapPages.add(new Integer(swapPage));
+	    }
 
-	swapPageMap.put(evictedProcInfo, ppn);
+	    byte[] pageData = new byte[pageSize];
+	    byte[] memory = Machine.processor().getMemory();
+	    System.arraycopy(memory, ppn*pageSize, pageData, 0, pageSize);
+            //Don't think the following line is needed, it gets consumed right away
+	    //UserKernel.freePages.add(new Integer(ppn));
 	
+
+	    swapFile.write(pageData, swapPage*pageSize, pageSize); //write to swapage
+	    swapPageMap.put(evictedProcInfo, ppn);
+        }
 	
 	UserKernel.unregisterMemToProc(ppn);
+
 	return ppn;
     }
 
-    public static Integer checkSwapSpace(int vpn, UserProcess proc){
-	ProcessInfo skey = new ProcessInfo(vpn, proc);
-	return swapPageMap.get(skey);
-    }
 
     // dummy variables to make javac smarter
     private static VMProcess dummy1 = null;

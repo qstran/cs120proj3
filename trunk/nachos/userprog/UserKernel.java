@@ -131,8 +131,13 @@ public class UserKernel extends ThreadedKernel {
 	    this.proc = proc;
 	}
 
-        private int vpn;
-        private UserProcess proc;
+        public int vpn;
+        public UserProcess proc;
+    }
+
+    public static Integer checkSwapSpace(int vpn, UserProcess proc){
+	ProcessInfo skey = new ProcessInfo(vpn, proc);
+	return swapPageMap.get(skey);
     }
   
     protected static HashMap<ProcessInfo, Integer> swapPageMap = new HashMap<ProcessInfo, Integer>();
