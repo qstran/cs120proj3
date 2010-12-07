@@ -160,7 +160,7 @@ public class UserProcess {
 	    int off = Processor.offsetFromAddress(vaddr);
 
 	    int transfer = Math.min(length, pageSize-off);
-
+	    
 	    int ppn = pinVirtualPage(vpn, false);
 	    if (ppn == -1)
 		break;
@@ -237,6 +237,7 @@ public class UserProcess {
 
 	return amount;
     }
+
     protected int pinVirtualPage(int vpn, boolean isUserWrite) {
 	if (vpn < 0 || vpn >= pageTable.length)
 	    return -1;
@@ -385,8 +386,12 @@ public class UserProcess {
 	    Lib.debug(dbgProcess, "\tinitializing " + section.getName()
 		      + " section (" + section.getLength() + " pages)");
 
+System.out.println("\tinitializing " + section.getName()
+		      + " section (" + section.getLength() + " pages)");
+
 	    for (int i=0; i<section.getLength(); i++) {
 		int vpn = section.getFirstVPN()+i;
+System.out.println("vpn: " + vpn);
 
 		pageTable[vpn].readOnly = section.isReadOnly();
 		section.loadPage(i, pinVirtualPage(vpn, false));
@@ -759,6 +764,8 @@ public class UserProcess {
 	    break;				       
 				       
 	default:
+	    System.out.println("Unexpected exception: " +
+		      Processor.exceptionNames[cause]);
 	    Lib.debug(dbgProcess, "Unexpected exception: " +
 		      Processor.exceptionNames[cause]);
 	    abnormalTermination = true;
@@ -766,6 +773,12 @@ public class UserProcess {
 	    Lib.assertNotReached("Unexpected exception");
 	}
     }
+
+    public boolean isReadOnlyPage(int vpn){
+	return pageTable[vpn].readOnly;
+    }
+
+
 
     /** The program being run by this process. */
     protected Coff coff;
