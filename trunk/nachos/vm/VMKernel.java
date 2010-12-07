@@ -80,12 +80,11 @@ public class VMKernel extends UserKernel {
 	//no need to write it to swap if page is read-only
         if(evictedProcInfo.proc.isReadOnlyPage(evictedProcInfo.vpn)){
 	    if( freeSwapPages.size() > 0 ){
+                System.out.println("Using gap in swapfile");
 	        swapPage = ((Integer)freeSwapPages.removeFirst()).intValue();
 	    }else{
-	        swapPage = swapFile.length() + 1;
-                if(swapPage < 0){
-                    System.out.println("swap file returning nasty length");
-                }
+	        swapPage = (swapFile.length()/pageSize) + 1;
+                System.out.println("new swap file page count: " + swapPage);
 	        freeSwapPages.add(new Integer(swapPage));
 	    }
 
@@ -95,11 +94,13 @@ public class VMKernel extends UserKernel {
             //Don't think the following line is needed, it gets consumed right away
 	    //UserKernel.freePages.add(new Integer(ppn));
 	
-
-	    swapFile.write(pageData, swapPage*pageSize, pageSize); //write to swapage
-	    swapPageMap.put(evictedProcInfo, ppn);
+	    swapFile.write(swapPage*pageSize, pageData, 0, pageSize); //write to swapage
+	    swapPageMap.put(evictedProcInfo, new Integer(ppn));
         }
 	
+        //update pageTable
+        evictedProcInfo.proc.invalidate(evictedProcInfo.vpn);
+
 	UserKernel.unregisterMemToProc(ppn);
 
 	return ppn;
@@ -112,19 +113,13 @@ public class VMKernel extends UserKernel {
     private static final char dbgVM = 'v';
 
     /** This kernel's page table. */
-    //public static TranslationEntry[] pageTable;
-    /** Guards access to the pageTable. */
-    //public static Lock pageTableLock;
-
-    public static Lock swapLock;
-
-    /** This kernel's page table. */
     public static int[] invPageTable;
 
     /** The swap page free list. */
     private static LinkedList freeSwapPages = new LinkedList();
     private static String swapFileName;
-    private static OpenFile swapFile;
+    public static OpenFile swapFile;
+    public static Lock swapLock;
 
     private static final int pageSize = Processor.pageSize;
    
@@ -132,8 +127,13 @@ public class VMKernel extends UserKernel {
         ProcessInfo skey = new ProcessInfo(vpn, proc);
 
         // Now search for the vpn, pid pair within our map
+	//TODO: should this be .remove();?
         Integer index = swapPageMap.get(skey);
-        return index; 
+        if(index == null){
+            return -1;
+        }else{
+            return index.intValue(); 
+        }
     }
 
 }

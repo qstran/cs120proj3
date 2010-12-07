@@ -216,26 +216,14 @@ public class VMProcess extends UserProcess {
 
     protected TranslationEntry handlePageFault(int vpn){
 	Lib.assertTrue(Machine.processor().hasTLB());
-
-	Integer filePageOffset = VMKernel.checkSwapSpace(vpn, (UserProcess) this);
 	int ppn;
 
-	//TODO: implement this
 	Lib.assertTrue(UserKernel.memoryLock.isHeldByCurrentThread());
 
 	//Get a free Physical page or Evict to make room
 	if ( VMKernel.freePages.size() > 0){	//nothing needs to be evicted
 	    ppn = ((Integer)VMKernel.freePages.removeFirst()).intValue();
 	    //logMsg("Took a free phys page. " + VMKernel.freePages.size() + " remaining.");
-
-	    if(filePageOffset != null){		//page was in swap
-		logMsg("looking for page in swap space");
-		VMKernel.swapLock.acquire();
-		//move contents from swap into freepage
-		//TODO: if pinned somehow wait here without holding all prev locks forever
-		//maybe this should be a function call to VMKernel
-		VMKernel.swapLock.release();
-	    }
 	}else{					//something needs to be evicted
 	    logMsg("evicting something");
 	    ppn = VMKernel.pageEvict();
@@ -245,7 +233,24 @@ public class VMProcess extends UserProcess {
 	pageTable[vpn] = new TranslationEntry(vpn, ppn, true, false, false, false);
 	VMKernel.registerMemToProc(pageTable[vpn].ppn, vpn, (UserProcess) this);
 
-	// load sections
+
+	//TODO: how do we know which of these to do?
+	// load page contents, either from swap or coff or new
+	int swapPage = VMKernel.getSwapPage(vpn, (UserProcess) this);
+        if(swapPage >= 0){		//page was in swap
+	    logMsg("page was in swap space*************************");
+	    VMKernel.swapLock.acquire();
+	    //TODO: if pinned somehow wait here without holding all prev locks forever
+	    byte[] swapData = new byte[pageSize];
+	    byte[] memory = Machine.processor().getMemory();
+	    VMKernel.swapFile.read(swapPage*pageSize, swapData, 0, pageSize); //read swapage
+	    System.arraycopy(swapData, ppn*pageSize, memory, 0, pageSize);
+	    VMKernel.swapPageMap.remove(new UserKernel.ProcessInfo(vpn, (UserProcess) this));
+            //Don't think the following line is needed, it gets consumed right away
+	    //UserKernel.freePages.add(new Integer(ppn));
+	    VMKernel.swapLock.release();
+        }
+
 	for (int s=0; s<coff.getNumSections(); s++) {
 	    CoffSection section = coff.getSection(s);
 
