@@ -40,6 +40,8 @@ public class VMKernel extends UserKernel {
 	    Machine.halt();
 	    Lib.assertNotReached("Machine.halt() did not halt machine!");
 	}
+
+       	allPinned = new Condition(UserKernel.memoryLock);
     }
 
     /**
@@ -69,18 +71,39 @@ public class VMKernel extends UserKernel {
 	int swapPage;
 
 	//decide which proc based on clock. for now just pick randomly
-	//TODO: CHANGE THIS!!!!!!!!!
-	int ppn = (int)(Machine.processor().getNumPhysPages() * Math.random());
+	//TODO: CHANGE THIS TO CLOCK ALGO!!!!!!!!!
+	int ppn = -1;// = (int)(Machine.processor().getNumPhysPages() * Math.random());
+        
+        while(ppn < 0){
+            for(int rotation = 0; rotation < 2; rotation++) {
+                for(int dialIndex=0; dialIndex<ipt.size(); dialIndex++){
+                    ProcessInfo procInfoAtDial = ipt.get(new Integer(dialIndex));
+                    if(((VMProcess)procInfoAtDial.proc).canBeEvicted(procInfoAtDial.vpn)){
+                        ppn = ((VMProcess)procInfoAtDial.proc).getPPN(procInfoAtDial.vpn);
+                        System.out.println("Found evictable page. ppn = " + ppn);
+                        // We set the values forcibly so that we exit the loop if we
+                        // find something evictable
+                        dialIndex = ipt.size();
+                        rotation = 2;
+                    }else{
+                        ((VMProcess)procInfoAtDial.proc).clearRecentlyUsedStatus(procInfoAtDial.vpn);
+                    }
+                }
+            }
 
-	//TODO: use Condition & memoryLock to sleep if all pages are pinned
+            if(ppn < 0){
+                System.out.println("No evictable pages found. sleeping...");
+                allPinned.sleep();
+            }
+        }
 
         //update IPT
-	ProcessInfo evictedProcInfo = physPageMap.get(ppn);
+	ProcessInfo evictedProcInfo = ipt.get(ppn);
 
 	//no need to write it to swap if page is read-only
-        if(evictedProcInfo.proc.isReadOnlyPage(evictedProcInfo.vpn)){
+        if(!evictedProcInfo.proc.isReadOnlyPage(evictedProcInfo.vpn)){
 	    if( freeSwapPages.size() > 0 ){
-                System.out.println("Using gap in swapfile");
+                System.out.println("Using gap in swapfile for vpn: " + evictedProcInfo.vpn);
 	        swapPage = ((Integer)freeSwapPages.removeFirst()).intValue();
 	    }else{
 	        swapPage = (swapFile.length()/pageSize) + 1;
@@ -97,13 +120,26 @@ public class VMKernel extends UserKernel {
 	    swapFile.write(swapPage*pageSize, pageData, 0, pageSize); //write to swapage
 	    swapPageMap.put(evictedProcInfo, new Integer(ppn));
         }
-	
+
         //update pageTable
         evictedProcInfo.proc.invalidate(evictedProcInfo.vpn);
 
 	UserKernel.unregisterMemToProc(ppn);
 
 	return ppn;
+    }
+
+    public static int getSwapPage(int vpn, UserProcess proc) {
+        ProcessInfo skey = new ProcessInfo(vpn, proc);
+
+        // Now search for the vpn, pid pair within our map
+	//TODO: should this be .remove();?
+        Integer index = swapPageMap.get(skey);
+        if(index == null){
+            return -1;
+        }else{
+            return index.intValue(); 
+        }
     }
 
 
@@ -121,19 +157,10 @@ public class VMKernel extends UserKernel {
     public static OpenFile swapFile;
     public static Lock swapLock;
 
+    private static Condition allPinned;
+
     private static final int pageSize = Processor.pageSize;
    
-    public static int getSwapPage(int vpn, UserProcess proc) {
-        ProcessInfo skey = new ProcessInfo(vpn, proc);
 
-        // Now search for the vpn, pid pair within our map
-	//TODO: should this be .remove();?
-        Integer index = swapPageMap.get(skey);
-        if(index == null){
-            return -1;
-        }else{
-            return index.intValue(); 
-        }
-    }
 
 }
