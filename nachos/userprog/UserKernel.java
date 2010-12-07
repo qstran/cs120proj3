@@ -125,7 +125,7 @@ public class UserKernel extends ThreadedKernel {
 	super.terminate();
     }
 
-    protected static class ProcessInfo {
+    public static class ProcessInfo {
 	public ProcessInfo(int vpn, UserProcess proc){
 	    this.vpn = vpn;
 	    this.proc = proc;
@@ -134,14 +134,9 @@ public class UserKernel extends ThreadedKernel {
         public int vpn;
         public UserProcess proc;
     }
-
-    public static Integer checkSwapSpace(int vpn, UserProcess proc){
-	ProcessInfo skey = new ProcessInfo(vpn, proc);
-	return swapPageMap.get(skey);
-    }
   
-    protected static HashMap<ProcessInfo, Integer> swapPageMap = new HashMap<ProcessInfo, Integer>();
-    protected static HashMap<Integer, ProcessInfo> physPageMap = new HashMap<Integer, ProcessInfo>();
+    public static HashMap<ProcessInfo, Integer> swapPageMap = new HashMap<ProcessInfo, Integer>();
+    public static HashMap<Integer, ProcessInfo> physPageMap = new HashMap<Integer, ProcessInfo>();
 
     /** Globally accessible reference to the synchronized console. */
     public static SynchConsole console;

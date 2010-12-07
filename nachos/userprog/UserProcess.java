@@ -778,6 +778,10 @@ System.out.println("vpn: " + vpn);
 	return pageTable[vpn].readOnly;
     }
 
+    public void invalidate(int vpn){
+	pageTable[vpn].valid = false;
+    }
+
 
 
     /** The program being run by this process. */
