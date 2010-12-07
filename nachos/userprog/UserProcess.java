@@ -386,12 +386,8 @@ public class UserProcess {
 	    Lib.debug(dbgProcess, "\tinitializing " + section.getName()
 		      + " section (" + section.getLength() + " pages)");
 
-System.out.println("\tinitializing " + section.getName()
-		      + " section (" + section.getLength() + " pages)");
-
 	    for (int i=0; i<section.getLength(); i++) {
 		int vpn = section.getFirstVPN()+i;
-System.out.println("vpn: " + vpn);
 
 		pageTable[vpn].readOnly = section.isReadOnly();
 		section.loadPage(i, pinVirtualPage(vpn, false));
@@ -780,6 +776,7 @@ System.out.println("vpn: " + vpn);
 
     public void invalidate(int vpn){
 	pageTable[vpn].valid = false;
+	pageTable[vpn].readOnly = false;
     }
 
 

@@ -111,11 +111,11 @@ public class UserKernel extends ThreadedKernel {
 
     public static void registerMemToProc(int ppn, int vpn, UserProcess proc){
 	ProcessInfo procInfo = new ProcessInfo(vpn, proc);
-	physPageMap.put(ppn, procInfo);
+	ipt.put(ppn, procInfo);
     }
 
     public static void unregisterMemToProc(int ppn){
-	physPageMap.remove(ppn);
+	ipt.remove(ppn);
     }
 
     /**
@@ -136,7 +136,7 @@ public class UserKernel extends ThreadedKernel {
     }
   
     public static HashMap<ProcessInfo, Integer> swapPageMap = new HashMap<ProcessInfo, Integer>();
-    public static HashMap<Integer, ProcessInfo> physPageMap = new HashMap<Integer, ProcessInfo>();
+    public static HashMap<Integer, ProcessInfo> ipt = new HashMap<Integer, ProcessInfo>();
 
     /** Globally accessible reference to the synchronized console. */
     public static SynchConsole console;
