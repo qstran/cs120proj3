@@ -17,6 +17,7 @@ public class VMProcess extends UserProcess {
     }
 
     protected int pinVirtualPage(int vpn, boolean isUserWrite) {
+//System.out.println("pinVirtualPage");
 	if (vpn < 0 || vpn >= pageTable.length)
 	    return -1;
 
@@ -38,6 +39,7 @@ public class VMProcess extends UserProcess {
     }
     
     protected void unpinVirtualPage(int vpn) {
+//System.out.println("unpinVirtualPage");
 	pinnedPages[vpn] = false;
     }
 
@@ -62,7 +64,7 @@ public class VMProcess extends UserProcess {
 	byte[] memory = Machine.processor().getMemory();
 	
 	int amount = 0;
-
+//System.out.println("readVirtualMemory");
 	while (length > 0) {
 	    int vpn = Processor.pageFromAddress(vaddr);
 	    int off = Processor.offsetFromAddress(vaddr);
@@ -76,7 +78,7 @@ public class VMProcess extends UserProcess {
 	    
 	    TranslationEntry entry = pageTable[vpn];
 	    if (entry == null || !entry.valid){
-		pageTable[vpn] = handlePageFault(vpn);
+		handlePageFault(vpn);
 	    }
 	    
 	    int ppn = pinVirtualPage(vpn, false);
@@ -86,7 +88,7 @@ public class VMProcess extends UserProcess {
 	    int rand = (int)(Machine.processor().getTLBSize() * Math.random());
 	    Machine.processor().writeTLBEntry(rand, pageTable[vpn]);
 
-	    VMKernel.registerMemToProc(pageTable[vpn].ppn, vpn, (UserProcess) this);
+	    //VMKernel.registerMemToProc(pageTable[vpn].ppn, vpn, (UserProcess) this);
 
 	    //update PageTable (done by pin i think)
 	    UserKernel.memoryLock.release();
@@ -128,7 +130,7 @@ public class VMProcess extends UserProcess {
 	byte[] memory = Machine.processor().getMemory();
 	
 	int amount = 0;
-
+//System.out.println("writeVirtualMemory");
 	while (length > 0) {
 	    int vpn = Processor.pageFromAddress(vaddr);
 	    int off = Processor.offsetFromAddress(vaddr);
@@ -142,7 +144,7 @@ public class VMProcess extends UserProcess {
 
 	    TranslationEntry entry = pageTable[vpn];
 	    if (entry == null || !entry.valid){
-		entry = handlePageFault(vpn);
+		handlePageFault(vpn);
 	    }
 
 	    int ppn = pinVirtualPage(vpn, true);
@@ -152,7 +154,7 @@ public class VMProcess extends UserProcess {
 	    int rand = (int)(Machine.processor().getTLBSize() * Math.random());
 	    Machine.processor().writeTLBEntry(rand, pageTable[vpn]);
 
-	    VMKernel.registerMemToProc(pageTable[vpn].ppn, vpn, (UserProcess) this);
+	    //VMKernel.registerMemToProc(pageTable[vpn].ppn, vpn, (UserProcess) this);
 
 	    //update PageTable (done by pin i think)
 	    UserKernel.memoryLock.release();
@@ -215,6 +217,8 @@ public class VMProcess extends UserProcess {
 	logMsg("needed pages for pid " + super.processID() + " = " + numPages);
 	for(int vpn=0; vpn<numPages; vpn++){
 	    pageTable[vpn] = new TranslationEntry(vpn, 1, false, false, false, false);
+            pinnedPages[vpn] = false;
+            recentlyUsedPages[vpn] = false;
 	}
 
 	UserKernel.memoryLock.release();
@@ -229,16 +233,21 @@ public class VMProcess extends UserProcess {
         for (int vpn=0; vpn<pageTable.length; vpn++){
 	    if(pageTable[vpn] != null && pageTable[vpn].valid){
 	        UserKernel.freePages.add(new Integer(pageTable[vpn].ppn));
+	        VMKernel.removeFromSwapPageMap(vpn, (UserProcess) this);
 	    }
 	}
     }
 
     public boolean canBeEvicted(int vpn){
+//logMsg("canBeEvicted, vpn: " + vpn);
 	if(!pinnedPages[vpn] && !recentlyUsedPages[vpn]){
-	    logMsg("pinnedPages[vpn]: "+pinnedPages[vpn] + 
-		" recentlyUsedPages[vpn]: " + recentlyUsedPages[vpn]);
+//	    logMsg("pinnedPages[vpn]: " + pinnedPages[vpn] + 
+//		" recentlyUsedPages[vpn]: " + recentlyUsedPages[vpn]);
 	    return true;
 	}
+
+//	    logMsg("pinnedPages[vpn]: " + pinnedPages[vpn] + 
+//		" recentlyUsedPages[vpn]: " + recentlyUsedPages[vpn]);
 
 	return false;
     }
@@ -247,11 +256,15 @@ public class VMProcess extends UserProcess {
 	recentlyUsedPages[vpn] = false;
     }
 
+    public boolean isDirty(int vpn){
+	return pageTable[vpn].dirty;
+    }
+
     public int getPPN(int vpn){
 	return pageTable[vpn].ppn;
     }
 
-    protected TranslationEntry handlePageFault(int vpn){
+    protected void handlePageFault(int vpn){
 	Lib.assertTrue(Machine.processor().hasTLB());
 	int ppn;
 
@@ -260,13 +273,14 @@ public class VMProcess extends UserProcess {
 	//Get a free Physical page or Evict to make room
 	if ( VMKernel.freePages.size() > 0){	//nothing needs to be evicted
 	    ppn = ((Integer)VMKernel.freePages.removeFirst()).intValue();
-	    logMsg("Took a free phys page. " + VMKernel.freePages.size() + " remaining.");
+	    //logMsg("Took a free phys page. " + VMKernel.freePages.size() + " remaining.");
 	}else{					//something needs to be evicted
-	    logMsg("evicting something");
+	    //logMsg("evicting something");
 	    ppn = VMKernel.pageEvict();
 
 	}
-
+	
+	logMsg("Allocating ppn: " + ppn + " to vpn: " + vpn);
 	pageTable[vpn] = new TranslationEntry(vpn, ppn, true, false, false, false);
 	VMKernel.registerMemToProc(pageTable[vpn].ppn, vpn, (UserProcess) this);
 
@@ -280,39 +294,46 @@ public class VMProcess extends UserProcess {
 		int sectVPN = section.getFirstVPN()+i;
 
 		if(sectVPN == vpn && section.isReadOnly()){
-		    logMsg("\tinitializing " + section.getName()
-		      + " section (" + section.getLength() + " pages)");
+		    //logMsg("\tinitializing " + section.getName()
+		    //  + " section (" + section.getLength() + " pages)");
 		    //logMsg("vpn: " + sectVPN);
 		    //logMsg("page offset in this section: " + i);
 		    //logMsg("ppn: " + pinVirtualPage(vpn, false));
 		    pageTable[vpn].readOnly = section.isReadOnly();
 		    section.loadPage(i, pinVirtualPage(vpn, false));
-
-		    return pageTable[vpn];
+		    unpinVirtualPage(vpn);
+		    return;
 		}
 	    }
 	}
 
 	int swapPage = VMKernel.getSwapPage(vpn, (UserProcess) this);
+        System.out.println("vpn: " + vpn + "UserProcess: " + this);
+        VMKernel.DumpSwapPageMap();
+        System.out.println("Got swap page: " + swapPage);
         if(swapPage >= 0){		//page was in swap
 	    logMsg("page was in swap space*************************");
-	    VMKernel.swapLock.acquire();
+	    //VMKernel.swapLock.acquire();
 	    //TODO: if pinned somehow wait here without holding all prev locks forever
 	    byte[] swapData = new byte[pageSize];
 	    byte[] memory = Machine.processor().getMemory();
+            System.out.println("%%%%%%%%%%%%%%memory length = " + memory.length);
 	    VMKernel.swapFile.read(swapPage*pageSize, swapData, 0, pageSize); //read swapage
-	    System.arraycopy(swapData, ppn*pageSize, memory, 0, pageSize);
-	    VMKernel.swapPageMap.remove(new UserKernel.ProcessInfo(vpn, (UserProcess) this));
+
+            System.out.println("%%%%%%%%%%%%%%srclength = " + ppn*pageSize);
+            System.out.println("%%%%%%%%%%%%%%ppn = " + ppn);
+
+
+	    System.arraycopy(swapData, 0, memory, ppn*pageSize, pageSize);
+            // TODO: dpn't remove, leave a freaking copy!
+	    //VMKernel.swapPageMap.remove(new UserKernel.ProcessInfo(vpn, (UserProcess) this));
             //Don't think the following line is needed, it gets consumed right away
 	    //UserKernel.freePages.add(new Integer(ppn));
-	    VMKernel.swapLock.release();
-	    return pageTable[vpn];
+	    //VMKernel.swapLock.release();
+	    return;
         }
 
-System.out.println("requested page "+vpn+" not coff section or in Swap.");
-
-
-	return pageTable[vpn];
+//System.out.println("requested page "+vpn+" not coff section or in Swap.");
 	
     }
 
@@ -335,7 +356,8 @@ System.out.println("requested page "+vpn+" not coff section or in Swap.");
 
 	    int vaddr = Machine.processor().readRegister(Processor.regBadVAddr);
 	    int vpn = Processor.pageFromAddress(vaddr);
-	    //logMsg("vpn of TLB miss: " + vpn);
+	    //vpn -= 1;
+	    logMsg("**********************vpn of TLB miss: " + vpn);
 
 	    UserKernel.memoryLock.acquire();
 
@@ -349,8 +371,14 @@ System.out.println("requested page "+vpn+" not coff section or in Swap.");
 	    }  
 
 	    if (pageTable[vpn] == null || !pageTable[vpn].valid){
-		//logMsg("pagetable entry is null or invalid");
-		pageTable[vpn] = handlePageFault(vpn);
+		//if (pageTable[vpn] == null)
+		//	logMsg("pagetable entry is null");
+		//if (!pageTable[vpn].valid)
+		//	logMsg("pagetable entry is invalid");
+
+		handlePageFault(vpn);
+
+		//logMsg("pagetable[vpn] after handling: " + pageTable[vpn].valid);
 	    }
 
 	    UserKernel.memoryLock.release();
@@ -370,7 +398,9 @@ System.out.println("requested page "+vpn+" not coff section or in Swap.");
 	
     // shorter wrapper for log messages
     private static final void logMsg (String msg) {
-        System.out.println(msg);
+        return ;
+	//int lineNum = Thread.currentThread().getStackTrace()[2].getLineNumber();
+        //System.out.println(msg + " @" + lineNum);
     }
 
     private boolean[] pinnedPages;

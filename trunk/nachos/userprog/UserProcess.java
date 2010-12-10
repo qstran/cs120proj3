@@ -370,7 +370,7 @@ public class UserProcess {
 
 	for (int vpn=0; vpn<numPages; vpn++) {
 	    int ppn = ((Integer)UserKernel.freePages.removeFirst()).intValue();
-
+System.out.println("Allocating ppn: " + ppn + " to vpn: " + vpn);
 	    UserKernel.registerMemToProc(ppn,vpn,this);
 
 	    pageTable[vpn] = new TranslationEntry(vpn, ppn,
